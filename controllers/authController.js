@@ -43,7 +43,7 @@ exports.userLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid Credentials." });
 
       //this is for token generate according to the role.
-      const token = await jwt.sign(
+      const token =  jwt.sign(
         { id: user._id, role: user.role },
         process.env.JWTSECRET,
         { expiresIn: "2hr" }

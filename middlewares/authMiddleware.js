@@ -2,8 +2,9 @@ const jwt = require("jsonwebtoken");
 
 exports.authMiddleware = async (req, res, next) => {
   const authHeader = req.header("Authorization");
+  console.log("Auth Header:", authHeader);
 
-  if (!authHeader || !authHeader.startsWith("Bearer")) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     return res.status(401).json({
       success: false,
       message: "Access denied. No token provided.",
@@ -17,7 +18,7 @@ exports.authMiddleware = async (req, res, next) => {
         .json({ success: false, message: "No token provided" });
 
     try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.JWTSECRET);
       req.user = { id: decoded.id, role: decoded.role }; // attach user to req
       next();
     } catch (err) {

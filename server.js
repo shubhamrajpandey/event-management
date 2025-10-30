@@ -7,6 +7,7 @@ const connectDB = require("./config/db");
 const authRouter = require('./routes/authRoute');
 const eventRouter = require('./routes/eventRoute');
 const { authMiddleware } = require("./middlewares/authMiddleware");
+const  otpRouter =require( "./routes/otpRoute.js");
 
 dotenv.config();
 connectDB();
@@ -20,6 +21,7 @@ app.use(cors());
 app.use(morgan('dev'));
 
 app.use('/auth', authRouter);
+app.use('/otp', otpRouter);
 app.use('/events', authMiddleware, eventRouter);
 
 app.use((err, req, res, next) => {

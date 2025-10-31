@@ -8,7 +8,7 @@ const authRouter = require('./routes/authRoute');
 const eventRouter = require('./routes/eventRoute');
 const { authMiddleware } = require("./middlewares/authMiddleware");
 const  otpRouter =require( "./routes/otpRoute.js");
-
+const verifyOtp = require('./routes/verifyOtp.js');
 dotenv.config();
 connectDB();
 
@@ -22,6 +22,7 @@ app.use(morgan('dev'));
 
 app.use('/auth', authRouter);
 app.use('/otp', otpRouter);
+app.use('/verify-otp',verifyOtp);
 app.use('/events', authMiddleware, eventRouter);
 
 app.use((err, req, res, next) => {

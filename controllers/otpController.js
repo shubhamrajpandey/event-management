@@ -1,5 +1,7 @@
 const sendEmail = require("../utils/sendEmail");
 const { StatusCodes } = require("http-status-codes");
+const bcrypt = require("bcrypt");
+const OTP = require("../models/otpModel");
 
 const sendOTP = async (req, res) => {
   try {
@@ -11,15 +13,21 @@ const sendOTP = async (req, res) => {
       });
     }
 
-
     const otp = Math.floor(100000 + Math.random() * 900000);
+    const hashedOtp = await bcrypt.hash(otp.toString(), 10);
 
+    const otpRecord = await OTP.create({
+      email,
+      otp: hashedOtp,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      used: false,
+    });
 
-   await sendEmail(
-  email,
-  "BookSansar- OTP Verification",
-  `Your OTP is: ${otp}`, 
-  `
+    await sendEmail(
+      email,
+      "BookSansar- OTP Verification",
+      `Your OTP is: ${otp}`,
+      `
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border:1px solid #e0e0e0; border-radius:10px; overflow:hidden;">
     <div style="background-color:#28a745; color:white; text-align:center; padding:20px;">
       <h1>BookSansar</h1>
@@ -39,14 +47,14 @@ const sendOTP = async (req, res) => {
     </div>
   </div>
   `
-);
+    );
 
     console.log(`OTP sent to ${email}: ${otp}`);
 
     res.status(StatusCodes.OK).json({
       success: true,
       message: "OTP sent successfully",
-      otp, 
+      otpRequestId: otpRecord._id, // frontend will store this temporarily
     });
   } catch (error) {
     console.error(" Error sending OTP:", error);
@@ -58,4 +66,45 @@ const sendOTP = async (req, res) => {
   }
 };
 
-module.exports = { sendOTP };
+const verifyOTP = async (req, res) => {
+  try {
+    const { otpRequestId, otp } = req.body;
+
+    const record = await OTP.findById(otpRequestId);
+    if (!record) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "No OTP request found for this email",
+      });
+    }
+    if (expiresAt < new Date()) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "OTP has expired",
+      });
+    }
+    const isMatch = await bcrypt.compare(otp.toString(), record.otp);
+    if (!isMatch) {
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: "Invalid OTP",
+      });
+    }
+
+    record.used = true;
+    await record.save();
+    res.status(StatusCodes.OK).json({
+      success: true,
+      message: "OTP verified successfully",
+    });
+  } catch (error) {
+    console.error("Error verifying OTP:", error);
+    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: "Failed to verify OTP",
+      error: error.message,
+    });
+  }
+};
+
+module.exports = { sendOTP, verifyOTP };

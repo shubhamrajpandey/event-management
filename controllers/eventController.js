@@ -4,13 +4,28 @@ const Event = require("../models/eventModel");
 
 exports.getEvent = async (req, res) => {
   try {
-    const events = await Event.find()
+    const page = Number(req.query.page) || 1;
+    const limit = Number(req.query.limit) || 10;
+
+    const safePage = page > 0 ? page : 1;
+    const safeLimit = limit > 0 && limit < 100 ? limit : 10;
+
+    const skip = (safePage - 1) * safeLimit;
+
+    const totalPage = await Event.countDocuments();
+    const totalLimit = Math.ceil(totalPage/safeLimit);
+
+    const events = await Event.find().sort({createdAt: -1}).skip(skip).limit(safeLimit)
       .populate("createdBy", "name email role") 
       .populate("participants", "name email"); 
 
     res.status(200).json({
       success: true,
       message: "Events retrieved successfully",
+      page: safePage,
+      limit: safeLimit,
+      totalPage,
+      totalLimit,
       data: events,
     });
   } catch (error) {

@@ -1,3 +1,4 @@
+const redisClient = require("../config/redis");
 const Event = require("../models/eventModel");
 
 //get all
@@ -12,22 +13,37 @@ exports.getEvent = async (req, res) => {
 
     const skip = (safePage - 1) * safeLimit;
 
-    const totalPage = await Event.countDocuments();
-    const totalLimit = Math.ceil(totalPage/safeLimit);
+    const totalEvents = await Event.countDocuments();
+    const totalLimit = Math.ceil(totalEvents / safeLimit);
 
-    const events = await Event.find().sort({createdAt: -1}).skip(skip).limit(safeLimit)
-      .populate("createdBy", "name email role") 
-      .populate("participants", "name email"); 
+    const events = await Event.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(safeLimit)
+      .populate("createdBy", "name email role")
+      .populate("participants", "name email");
 
-    res.status(200).json({
+    const responseData = {
       success: true,
       message: "Events retrieved successfully",
       page: safePage,
       limit: safeLimit,
-      totalPage,
+      totalEvents,
       totalLimit,
       data: events,
-    });
+    };
+
+    if (req.cacheKey) {
+  await redisClient.setEx(
+    req.cacheKey,
+    60,
+    JSON.stringify(responseData)
+  );
+}
+
+
+    res.status(200).json(responseData);
+
   } catch (error) {
     res.status(500).json({
       success: false,
@@ -35,6 +51,7 @@ exports.getEvent = async (req, res) => {
     });
   }
 };
+
 
 //get by id
 exports.getEventById = async (req, res) => {
